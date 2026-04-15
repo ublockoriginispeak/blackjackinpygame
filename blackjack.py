@@ -33,10 +33,14 @@ bgm_off = pygame.transform.scale(bgm_off, (16 * bgm_icon_scale_multiplier, 16 * 
 bgm_on_full = pygame.transform.scale(bgm_on_full, (16 * bgm_icon_scale_multiplier, 16 * bgm_icon_scale_multiplier))
 
 player_hand = pygame.sprite.Group()
+player_hand_area = pygame.Rect(0, 675, 1600, 225)
+player_number_of_cards_spawned = 0
+player_number_of_cards_touching_table = 0
+
 bot_hand = pygame.sprite.Group()
 
 header_position = (800, 150)
-header_image = pygame.image.load('blackjack/resources/header.jpg').convert()
+header_image = pygame.image.load('blackjack/resources/header.png').convert_alpha()
 
 play_button_position = (800, 700)
 play_button_image = pygame.image.load('blackjack/resources/play_button.jpg').convert()
@@ -44,6 +48,8 @@ play_button_image = pygame.image.load('blackjack/resources/play_button.jpg').con
 on_main_menu = True
 
 card_scale_multiplier = 3
+
+sfx_lets_go_gambling = pygame.mixer.Sound('blackjack/resources/sounds/lets_go_gambling.mp3')
 
 card_names = {
     1 : "Ace (1)",
@@ -69,7 +75,7 @@ suits = {
 }
 
 class Card(pygame.sprite.Sprite):
-    def __init__(self, number, suit, x, y):
+    def __init__(self, number, suit, x, y, identifer_number):
         pygame.sprite.Sprite.__init__(self)
         self.x = x
         self.y = y
@@ -86,6 +92,9 @@ class Card(pygame.sprite.Sprite):
         self.being_flipped_around = False
         self.being_dragged = False
         self.index_in_deck = 0
+        self.identifier_number = identifer_number
+        self.on_table = False
+        print(f"card {self.identifier_number} spawned")
 
 header_rect = pygame.Rect(header_position[0], header_position[1], header_image.get_width(), header_image.get_height())
 header_rect.center = header_position
@@ -96,26 +105,43 @@ play_button_rect.center = play_button_position
 play_button_hover_text = clear_sans_bold.render('Click to play', True, (0, 0, 0)).convert_alpha()
 play_button_hover_text_outline = clear_sans_bold.render('Click to play', True, (255, 255, 0)).convert_alpha()
 
-player_hand_area = pygame.Rect(0, 675, 1600, 225)
-
 while running:
-
-    if not on_main_menu:
-        if len(player_hand.sprites()) < 2:
-            player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], mouse_pos[0], mouse_pos[1]))
-            player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], mouse_pos[0], mouse_pos[1] + 10))
-
 
     mouse_pos = pygame.mouse.get_pos()
     cursor_image_rect.center = mouse_pos
     bgm_toggle = pygame.Rect(bgm_icon_position[0], bgm_icon_position[1], 16 * bgm_icon_scale_multiplier, 16 * bgm_icon_scale_multiplier)
     mouse_delta = pygame.mouse.get_rel()
+    player_number_of_cards_touching_table = 0
 
-    for card in player_hand:
-        if card.being_dragged:
-            card.x += mouse_delta[0]
-            card.y += mouse_delta[1]
-        card.rect.center = (card.x, card.y)
+    if not on_main_menu:
+        if len(player_hand.sprites()) < 2:
+            player_number_of_cards_spawned += 1
+            player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 533, 788, player_number_of_cards_spawned))
+            player_number_of_cards_spawned += 1
+            player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 1067, 788, player_number_of_cards_spawned))
+
+        for card in player_hand: # have to have this out of the below FOR loop
+            if player_hand_area.colliderect(card):
+                player_number_of_cards_touching_table += 1 # so the cards on the table don't adjust their position the moment a card is spawned, but the moment it is dropped onto the table
+
+        for card in player_hand:
+
+            if not card.on_table and not card.being_dragged and player_hand_area.colliderect(card):
+                card.on_table = True
+
+            if card.being_dragged and not card.on_table:
+                card.x += mouse_delta[0]
+                card.y += mouse_delta[1]
+            card.rect.center = (card.x, card.y)
+
+            if card.on_table:
+                if card.identifier_number == 1:
+                    card_position_gap = 1600 / (player_number_of_cards_touching_table + 1) # set this to number of cards spawned or to number of cards on table to change the time at which the cards adjust their position, either immediately after a card is spawned or only when it is dropped onto a table, not sure which one looks nicer
+                    card.x = card_position_gap # locks the first card into the left position on the hand area
+                    card.y = 788
+                else:
+                    card.x = card_position_gap * card.identifier_number
+                    card.y = 788
     #event check
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -133,16 +159,17 @@ while running:
                     if card.rect.collidepoint(mouse_pos):
                         card.being_dragged = True
                 if play_button_rect.collidepoint(mouse_pos):
+                    if on_main_menu:
+                        sfx_lets_go_gambling.set_volume(0.2)
+                        sfx_lets_go_gambling.play()
                     on_main_menu = False
             elif event.button == 3:
                 for card in player_hand:
                     if card.rect.collidepoint(mouse_pos):
-                        if card.active_image == card.front_image:
-                            card.active_image = card.back_image
-                        else:
-                            card.active_image = card.front_image
                         flip_sound = pygame.mixer.Sound(f'blackjack/resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
-                        flip_sound.play()
+                        if card.active_image == card.back_image:
+                            flip_sound.play()
+                            card.active_image = card.front_image
 
                 for card in bot_hand:
                     if card.rect.collidepoint(mouse_pos):
@@ -152,10 +179,11 @@ while running:
             if event.button == 1:
                 for card in player_hand:
                     card.being_dragged = False
-        """if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 #spawn new random card at mouse position
-                new_card = Card(random.randint(1, 13), random.choice(list(suits.items()))[0], mouse_pos[0], mouse_pos[1])"""
+                player_number_of_cards_spawned += 1
+                player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 100, 100, player_number_of_cards_spawned))
                 
     #rendering
     screen.fill(screen_colour)
@@ -190,4 +218,3 @@ while running:
     delta_time = clock.tick(60) / 1000
 
 pygame.quit()
-
