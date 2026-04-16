@@ -200,11 +200,13 @@ while running:
                 if play_button_rect.collidepoint(mouse_pos):
                     if on_main_menu:
                         sfx_lets_go_gambling.set_volume(0.2)
-                        sfx_lets_go_gambling.play()
+                        #sfx_lets_go_gambling.play()
                     on_main_menu = False
                 if deck_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player:
                     player_number_of_cards_spawned += 1
-                    player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], mouse_pos[0], mouse_pos[1], player_number_of_cards_spawned))
+                    new_card = Card(random.randint(1, 13), random.choice(list(suits.items()))[0], mouse_pos[0], mouse_pos[1], player_number_of_cards_spawned)
+                    new_card.being_dragged = True
+                    player_hand.add(new_card)
                     waiting_for_player = True
             elif event.button == 3:
                 for card in player_hand:
