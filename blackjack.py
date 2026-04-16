@@ -20,7 +20,7 @@ pygame.font.init()
 cantarell_extrabold = pygame.font.SysFont('Cantarell Extrabold', 75)
 clear_sans_bold = pygame.font.SysFont('Clear Sans Bold', 50)
 bgm_toggle_hover_text = clear_sans_bold.render('Mute music', True, (0, 0, 0))
-bgm_toggle_hover_text_outline = clear_sans_bold.render('Mute music', True, (255, 255, 0))
+bgm_toggle_hover_text_outline = clear_sans_bold.render('Mute music', True, (255, 255, 255))
 
 background_music_0 = pygame.mixer.Sound('blackjack/resources/sounds/bgm0.mp3')
 background_music_0.play(-1)
@@ -32,24 +32,50 @@ bgm_on_full = pygame.image.load('blackjack/resources/bgm_on_full.png').convert_a
 bgm_off = pygame.transform.scale(bgm_off, (16 * bgm_icon_scale_multiplier, 16 * bgm_icon_scale_multiplier))
 bgm_on_full = pygame.transform.scale(bgm_on_full, (16 * bgm_icon_scale_multiplier, 16 * bgm_icon_scale_multiplier))
 
+player_prompt_font = pygame.font.SysFont('Clear Sans Bold', 35)
+player_prompt_rect = pygame.Rect(500, 640, 1, 1)
+bot_prompt_font = pygame.font.SysFont('Clear Sans Bold', 50)
+
 player_hand = pygame.sprite.Group()
 player_hand_area = pygame.Rect(0, 675, 1600, 225)
 player_number_of_cards_spawned = 0
 player_number_of_cards_touching_table = 0
+player_hand_value = 0
+player_prompt_text = "Waiting for you to turn over your cards..."
 
 bot_hand = pygame.sprite.Group()
-
-header_position = (800, 150)
-header_image = pygame.image.load('blackjack/resources/header.png').convert_alpha()
-
-play_button_position = (800, 700)
-play_button_image = pygame.image.load('blackjack/resources/play_button.jpg').convert()
-
-on_main_menu = True
+bot_hand_area = pygame.Rect(0, 0, 1600, 225)
+bot_number_of_cards_spawned = 0
+bot_hand_value = 0
+bot_prompt = ""
 
 card_scale_multiplier = 3
 
+deck_image = pygame.image.load('blackjack/resources/cards/card-back.png').convert_alpha()
+deck_image = pygame.transform.scale(deck_image, (36 * card_scale_multiplier, 54 * card_scale_multiplier))
+deck_rect = pygame.Rect(0, 0, 36 * card_scale_multiplier, 54 * card_scale_multiplier)
+deck_rect.center = (38,450)
+
+header_position = (800, 150)
+header_image = pygame.image.load('blackjack/resources/header.png').convert_alpha()
+header_rect = pygame.Rect(header_position[0], header_position[1], header_image.get_width(), header_image.get_height())
+header_rect.center = header_position
+
+play_button_position = (800, 500)
+play_button_image_1 = pygame.image.load('blackjack/resources/play_1.png').convert_alpha()
+play_button_image_2 = pygame.image.load('blackjack/resources/play_2.png').convert_alpha()
+play_button_rect = pygame.Rect(play_button_position[0], play_button_position[1], play_button_image_1.get_width(), play_button_image_1.get_height())
+play_button_rect.center = play_button_position
+play_button_hover_text = clear_sans_bold.render('Click to play', True, (0, 0, 0)).convert_alpha()
+play_button_hover_text_outline = clear_sans_bold.render('Click to play', True, (255, 255, 255)).convert_alpha()
+
+on_main_menu = True
+
 sfx_lets_go_gambling = pygame.mixer.Sound('blackjack/resources/sounds/lets_go_gambling.mp3')
+
+credit_font = pygame.font.SysFont('Clear Sans Bold', 30)
+music_credit_text = credit_font.render('Music credit: https://www.youtube.com/watch?v=ichpZqbRtwM', True, (0, 0, 0), (255, 255, 255))
+art_credit_text = credit_font.render('Featuring art from opengameart.org', True, (0, 0, 0), (255, 255, 255))
 
 card_names = {
     1 : "Ace (1)",
@@ -96,15 +122,6 @@ class Card(pygame.sprite.Sprite):
         self.on_table = False
         print(f"card {self.identifier_number} spawned")
 
-header_rect = pygame.Rect(header_position[0], header_position[1], header_image.get_width(), header_image.get_height())
-header_rect.center = header_position
-
-play_button_rect = pygame.Rect(play_button_position[0], play_button_position[1], play_button_image.get_width(), play_button_image.get_height())
-play_button_rect.center = play_button_position
-
-play_button_hover_text = clear_sans_bold.render('Click to play', True, (0, 0, 0)).convert_alpha()
-play_button_hover_text_outline = clear_sans_bold.render('Click to play', True, (255, 255, 0)).convert_alpha()
-
 while running:
 
     mouse_pos = pygame.mouse.get_pos()
@@ -112,6 +129,11 @@ while running:
     bgm_toggle = pygame.Rect(bgm_icon_position[0], bgm_icon_position[1], 16 * bgm_icon_scale_multiplier, 16 * bgm_icon_scale_multiplier)
     mouse_delta = pygame.mouse.get_rel()
     player_number_of_cards_touching_table = 0
+    player_prompt = player_prompt_font.render(f"{player_prompt_text}", True, (0, 0, 0))
+    number_of_cards_not_flipped_over = 0
+    player_prompt_text = ""
+    waiting_for_player = False
+    current_turn = "player"
 
     if not on_main_menu:
         if len(player_hand.sprites()) < 2:
@@ -142,6 +164,16 @@ while running:
                 else:
                     card.x = card_position_gap * card.identifier_number
                     card.y = 788
+            
+                if card.active_image != card.front_image:
+                    number_of_cards_not_flipped_over += 1
+        
+        if number_of_cards_not_flipped_over == 1:
+            player_prompt_text = "Waiting for you to turn over your card..."
+            waiting_for_player = True
+        elif number_of_cards_not_flipped_over > 1:
+            player_prompt_text = "Waiting for you to turn over your cards..."
+            waiting_for_player = True
     #event check
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -166,10 +198,11 @@ while running:
             elif event.button == 3:
                 for card in player_hand:
                     if card.rect.collidepoint(mouse_pos):
-                        flip_sound = pygame.mixer.Sound(f'blackjack/resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
-                        if card.active_image == card.back_image:
-                            flip_sound.play()
-                            card.active_image = card.front_image
+                        if card.on_table:
+                            flip_sound = pygame.mixer.Sound(f'blackjack/resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
+                            if card.active_image == card.back_image:
+                                flip_sound.play()
+                                card.active_image = card.front_image
 
                 for card in bot_hand:
                     if card.rect.collidepoint(mouse_pos):
@@ -190,14 +223,19 @@ while running:
 
     if on_main_menu:
         screen.blit(header_image, header_rect)
-        screen.blit(play_button_image, play_button_rect)
 
         if play_button_rect.collidepoint(mouse_pos):
+            screen.blit(play_button_image_2, play_button_rect)
             screen.blit(play_button_hover_text_outline, (mouse_pos[0], mouse_pos[1] - 50))
             screen.blit(play_button_hover_text, (mouse_pos[0] - 2, mouse_pos[1] - 53))
+        else:
+            screen.blit(play_button_image_1, play_button_rect)
+        screen.blit(music_credit_text, (20, 850))
+        screen.blit(art_credit_text, (1220, 850))
     else:
         pygame.draw.rect(screen, (176, 128, 58), player_hand_area)
-    
+        pygame.draw.rect(screen, (176, 128, 58), bot_hand_area)
+        screen.blit(deck_image, deck_rect)
     if bgm_playing == True:
         screen.blit(bgm_on_full, bgm_icon_position)
     else:
@@ -205,6 +243,12 @@ while running:
 
     for card in player_hand:
         screen.blit(card.active_image, card.rect)
+    
+    for card in player_hand:
+        if card.on_table and card.active_image == card.back_image and card.rect.collidepoint(mouse_pos):
+            player_prompt_text = "Right click to turn over that card"
+    
+    screen.blit(player_prompt, player_prompt_rect)
 
     if bgm_toggle.collidepoint(mouse_pos):
         screen.blit(bgm_toggle_hover_text_outline, (mouse_pos[0] - 153, mouse_pos[1] + 38))
