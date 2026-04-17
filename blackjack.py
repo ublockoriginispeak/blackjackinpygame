@@ -18,9 +18,10 @@ mouse_pos = pygame.mouse.get_pos()
 
 pygame.font.init()
 cantarell_extrabold = pygame.font.SysFont('Cantarell Extrabold', 75)
-clear_sans_bold = pygame.font.SysFont('Clear Sans Bold', 50)
-bgm_toggle_hover_text = clear_sans_bold.render('Mute music', True, (0, 0, 0))
-bgm_toggle_hover_text_outline = clear_sans_bold.render('Mute music', True, (255, 255, 255))
+clear_sans_bold_size_1 = pygame.font.SysFont('Clear Sans Bold', 50)
+clear_sans_bold_size_2 = pygame.font.SysFont('Clear Sans Bold', 60)
+bgm_toggle_hover_text = clear_sans_bold_size_1.render('Mute music', True, (0, 0, 0))
+bgm_toggle_hover_text_outline = clear_sans_bold_size_1.render('Mute music', True, (255, 255, 255))
 
 background_music_0 = pygame.mixer.Sound('resources/sounds/bgm0.mp3')
 background_music_0.play(-1)
@@ -32,7 +33,7 @@ bgm_on_full = pygame.image.load('resources/bgm_on_full.png').convert_alpha()
 bgm_off = pygame.transform.scale(bgm_off, (16 * bgm_icon_scale_multiplier, 16 * bgm_icon_scale_multiplier))
 bgm_on_full = pygame.transform.scale(bgm_on_full, (16 * bgm_icon_scale_multiplier, 16 * bgm_icon_scale_multiplier))
 
-player_prompt_font = pygame.font.SysFont('Clear Sans Bold', 35)
+player_prompt_font = pygame.font.SysFont('Clear Sans Bold', 50)
 player_prompt_rect = pygame.Rect(500, 640, 1, 1)
 bot_prompt_font = pygame.font.SysFont('Clear Sans Bold', 50)
 
@@ -55,8 +56,8 @@ deck_coords = (38, 350)
 deck_image = pygame.image.load('resources/cards/card-back.png').convert_alpha()
 deck_image = pygame.transform.scale(deck_image, (36 * card_scale_multiplier, 54 * card_scale_multiplier))
 deck_rect = pygame.Rect(deck_coords[0], deck_coords[1], 36 * card_scale_multiplier, 54 * card_scale_multiplier)
-deck_hover_text = clear_sans_bold.render('Left click to hit from deck', True, (0, 0, 0))
-deck_hover_text_outline = clear_sans_bold.render('Left click to hit from deck', True, (255, 255, 255))
+deck_hover_text = clear_sans_bold_size_1.render('Left click to hit from deck', True, (0, 0, 0))
+deck_hover_text_outline = clear_sans_bold_size_1.render('Left click to hit from deck', True, (255, 255, 255))
 
 header_position = (800, 150)
 header_image = pygame.image.load('resources/header.png').convert_alpha()
@@ -68,8 +69,16 @@ play_button_image_1 = pygame.image.load('resources/play_1.png').convert_alpha()
 play_button_image_2 = pygame.image.load('resources/play_2.png').convert_alpha()
 play_button_rect = pygame.Rect(play_button_position[0], play_button_position[1], play_button_image_1.get_width(), play_button_image_1.get_height())
 play_button_rect.center = play_button_position
-player_card_back_hover_text = clear_sans_bold.render('Right click to turn over', True, (0, 0, 0)).convert_alpha()
-player_card_back_hover_text_outline = clear_sans_bold.render('Right click to turn over', True, (255, 255, 255)).convert_alpha()
+player_card_back_hover_text = clear_sans_bold_size_1.render('Right click to turn over', True, (0, 0, 0)).convert_alpha()
+player_card_back_hover_text_outline = clear_sans_bold_size_1.render('Right click to turn over', True, (255, 255, 255)).convert_alpha()
+
+stand_button_position = (20, 550)
+stand_button_scale_multiplier = 0.75
+stand_button_image_1 = pygame.image.load('resources/stand_1.png').convert_alpha()
+stand_button_image_2 = pygame.image.load('resources/stand_2.png').convert_alpha()
+stand_button_image_1 = pygame.transform.scale(stand_button_image_1, (200 * stand_button_scale_multiplier, 100 * stand_button_scale_multiplier))
+stand_button_image_2 = pygame.transform.scale(stand_button_image_2, (200 * stand_button_scale_multiplier, 100 * stand_button_scale_multiplier))
+stand_button_rect = pygame.Rect(stand_button_position[0], stand_button_position[1], stand_button_image_1.get_width(), play_button_image_1.get_height())
 
 waiting_for_player = False
 current_turn = "player"
@@ -120,12 +129,13 @@ class Card(pygame.sprite.Sprite):
         self.decorative_suit_name = suits[suit]
         self.card_name = card_names[number]
         self.active_image = self.back_image
-        self.being_flipped_around = False
         self.being_dragged = False
-        self.index_in_deck = 0
         self.identifier_number = identifer_number
         self.on_table = False
         print(f"card {self.identifier_number} spawned")
+
+def make_bot_decision():
+    pass
 
 while running:
 
@@ -139,6 +149,8 @@ while running:
     number_of_cards_not_flipped_over = 0
     player_prompt_text = ""
     waiting_for_player = False
+    player_number_of_cards_touching_table = 0
+    player_number_of_cards_spawned = 0
 
     if not on_main_menu:
         if len(player_hand.sprites()) < 2:
@@ -147,10 +159,16 @@ while running:
             player_number_of_cards_spawned += 1
             player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 1067, 788, player_number_of_cards_spawned))
 
+        if len(bot_hand.sprites()) < 2:
+            bot_number_of_cards_spawned += 1
+            bot_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 533, 112, bot_number_of_cards_spawned))
+            bot_number_of_cards_spawned += 1
+            bot_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 1067, 112, bot_number_of_cards_spawned))
+
         for card in player_hand: # have to have this out of the below FOR loop
             if player_hand_area.colliderect(card):
                 player_number_of_cards_touching_table += 1 # so the cards on the table don't adjust their position the moment a card is spawned, but the moment it is dropped onto the table
-
+            player_number_of_cards_spawned += 1
         for card in player_hand:
 
             if not card.on_table and not card.being_dragged and player_hand_area.colliderect(card):
@@ -163,12 +181,17 @@ while running:
 
             if card.on_table:
                 if card.identifier_number == 1:
-                    card_position_gap = 1600 / (player_number_of_cards_touching_table + 1) # set this to number of cards spawned or to number of cards on table to change the time at which the cards adjust their position, either immediately after a card is spawned or only when it is dropped onto a table, not sure which one looks nicer
-                    card.x = card_position_gap # locks the first card into the left position on the hand area
+                    player_card_position_gap = 1600 / (player_number_of_cards_touching_table + 1) # set this to number of cards spawned or to number of cards on table to change the time at which the cards adjust their position, either immediately after a card is spawned or only when it is dropped onto a table, not sure which one looks nicer
+                    card.x = player_card_position_gap # locks the first card into the left position on the hand area
                     card.y = 788
                 else:
-                    card.x = card_position_gap * card.identifier_number
+                    card.x = player_card_position_gap * card.identifier_number
                     card.y = 788
+
+            if not card.on_table and not player_hand_area.colliderect(card) and not card.being_dragged:
+                player_hand.remove(card)
+                current_turn = "player"
+                waiting_for_player = True
             
             if card.active_image != card.front_image:
                 waiting_for_player = True
@@ -180,6 +203,21 @@ while running:
         elif number_of_cards_not_flipped_over > 1:
             player_prompt_text = "Waiting for you to turn over your cards..."
             waiting_for_player = True
+
+        if current_turn == "bot" and not waiting_for_player:
+            player_prompt_text = "Bot's turn"
+
+        for card in bot_hand:
+            card.on_table = True
+            
+            if card.identifier_number == 1:
+                bot_card_position_gap = 1600 / (bot_number_of_cards_spawned + 1) # set this to number of cards spawned or to number of cards on table to change the time at which the cards adjust their position, either immediately after a card is spawned or only when it is dropped onto a table, not sure which one looks nicer
+                card.x = bot_card_position_gap # locks the first card into the left position on the hand area
+                card.y = 225
+            else:
+                card.x = bot_card_position_gap * card.identifier_number
+                card.y = 225
+            
         
     #event check
     for event in pygame.event.get():
@@ -200,14 +238,17 @@ while running:
                 if play_button_rect.collidepoint(mouse_pos):
                     if on_main_menu:
                         sfx_lets_go_gambling.set_volume(0.2)
-                        #sfx_lets_go_gambling.play()
+                        sfx_lets_go_gambling.play()
                     on_main_menu = False
-                if deck_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player:
+                if not on_main_menu and deck_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player:
                     player_number_of_cards_spawned += 1
                     new_card = Card(random.randint(1, 13), random.choice(list(suits.items()))[0], mouse_pos[0], mouse_pos[1], player_number_of_cards_spawned)
                     new_card.being_dragged = True
                     player_hand.add(new_card)
                     waiting_for_player = True
+                    current_turn = "bot"
+                if not on_main_menu and stand_button_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player:
+                    current_turn = "bot"
             elif event.button == 3:
                 for card in player_hand:
                     if card.rect.collidepoint(mouse_pos):
@@ -231,9 +272,6 @@ while running:
                 player_number_of_cards_spawned += 1
                 player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 100, 100, player_number_of_cards_spawned))
 
-    if current_turn == "bot":
-        player_prompt_text = "Bot's turn"
-
     #rendering
     screen.fill(screen_colour)
 
@@ -250,35 +288,48 @@ while running:
         pygame.draw.rect(screen, (176, 128, 58), player_hand_area)
         pygame.draw.rect(screen, (176, 128, 58), bot_hand_area)
         screen.blit(deck_image, deck_rect)
+        
+        if stand_button_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player:
+            screen.blit(stand_button_image_2, stand_button_rect)
+        else:
+            screen.blit(stand_button_image_1, stand_button_rect)
+        
+        if deck_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player:
+            screen.blit(deck_hover_text_outline, (mouse_pos[0] + 100, mouse_pos[1] + 36))
+            screen.blit(deck_hover_text, (mouse_pos[0] + 99, mouse_pos[1] + 35))
+
+        for card in bot_hand:
+            screen.blit(card.active_image, card.rect)
+
+        for card in player_hand:
+            screen.blit(card.active_image, card.rect)
+
+        for card in player_hand:
+            if card.on_table and card.active_image == card.back_image and card.rect.collidepoint(mouse_pos):
+                screen.blit(player_card_back_hover_text_outline, (mouse_pos[0] + 11, mouse_pos[1] - 51))
+                screen.blit(player_card_back_hover_text, (mouse_pos[0] + 10, mouse_pos[1] - 50))
+
+        screen.blit(player_prompt_outline, (player_prompt_rect[0] + 1, player_prompt_rect[1] + 1))
+        screen.blit(player_prompt, player_prompt_rect)
+        
     if bgm_playing == True:
         screen.blit(bgm_on_full, bgm_icon_position)
     else:
         screen.blit(bgm_off, bgm_icon_position)
 
-    if deck_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player:
-        screen.blit(deck_hover_text_outline, (mouse_pos[0] + 100, mouse_pos[1] + 36))
-        screen.blit(deck_hover_text, (mouse_pos[0] + 99, mouse_pos[1] + 35))
-    
-    screen.blit(player_prompt_outline, (player_prompt_rect[0] + 1, player_prompt_rect[1] + 1))
-    screen.blit(player_prompt, player_prompt_rect)
-
     if bgm_toggle.collidepoint(mouse_pos):
         screen.blit(bgm_toggle_hover_text_outline, (mouse_pos[0] - 151, mouse_pos[1] + 36))
         screen.blit(bgm_toggle_hover_text, (mouse_pos[0] - 150, mouse_pos[1] + 35))
     
-    turn_indicator = clear_sans_bold.render(f'{current_turn}', True, (255, 255, 255)) # testing, get rid of afterwards
-    waiting_indicator = clear_sans_bold.render(f'Waiting for player: {waiting_for_player}', True, (255, 255, 255))
+    turn_indicator = clear_sans_bold_size_1.render(f'{current_turn}', True, (255, 255, 255)) # testing, get rid of afterwards
+    waiting_indicator = clear_sans_bold_size_1.render(f'Waiting for player: {waiting_for_player}', True, (255, 255, 255))
+    test_1 = clear_sans_bold_size_1.render(f'cards touching table: {player_number_of_cards_touching_table}', True, (255, 255, 255))
+    test_2 = clear_sans_bold_size_1.render(f'player number of cards spawned: {player_number_of_cards_spawned}', True, (255, 255, 255))
 
-    screen.blit(turn_indicator, (1200, 500))
-    screen.blit(waiting_indicator, (1200, 550))
-
-    for card in player_hand:
-        screen.blit(card.active_image, card.rect)
-
-    for card in player_hand:
-        if card.on_table and card.active_image == card.back_image and card.rect.collidepoint(mouse_pos):
-            screen.blit(player_card_back_hover_text_outline, (mouse_pos[0] + 11, mouse_pos[1] - 51))
-            screen.blit(player_card_back_hover_text, (mouse_pos[0] + 10, mouse_pos[1] - 50))
+    screen.blit(turn_indicator, (1100, 500))
+    screen.blit(waiting_indicator, (1100, 550))
+    screen.blit(test_1, (1100, 600))
+    screen.blit(test_2, (1000, 650))
 
     cursor_image_rect.center = pygame.mouse.get_pos()
     screen.blit(cursor_image, cursor_image_rect) # cursor should be the last thing blitted 
