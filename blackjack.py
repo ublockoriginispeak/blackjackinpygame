@@ -1,3 +1,16 @@
+"""I'm aware that the below code is a mess, but I don't really care enough to overhaul it. 
+The logic looked kind of messy without using any custom functions, but I added some comments to 
+header the different sections, and now it looks okay-ish. The rendering is kind of a mess too but 
+if you just take a minute to look at it it makes sense, and rendering bugs are basically just 
+'if something isn't rendering properly, check the rendering section and make sure it's being 
+blitted in the right order compared to everything else.' The messiest part is definitely the 
+custom text rendering. I have an outline text and a main text for each text I want to render, and I 
+have to set them both. I use a variety of different fonts I have set, some of which are the same fonts 
+already loaded in memory but which I just created again anyway, and their names are confusing. I 
+have the fonts declared up before the game loop, the text rendered in conditional statements in the 
+game loop, and then the (two) different texts blitted to the screen down at the bottom, for 
+every single piece of text in the game. Amazing."""
+
 import pygame
 import random
 
@@ -53,6 +66,7 @@ bot_hand_area = pygame.Rect(0, 0, 1600, 225)
 bot_number_of_cards_spawned = 0
 bot_hand_value = 0
 bot_prompt = ""
+bot_think_timer = random.randint(150, 300)
 
 card_scale_multiplier = 3
 
@@ -146,9 +160,6 @@ class Card(pygame.sprite.Sprite):
             self.is_ace = False
         print(f"card {self.identifier_number} spawned")
 
-def make_bot_decision():
-    pass
-
 while running:
 
     mouse_pos = pygame.mouse.get_pos()
@@ -169,22 +180,25 @@ while running:
     player_hand_value_text = ""
     bot_hand_value_text = ""
 
+    if bot_think_timer == 0:
+        bot_think_timer = random.randint(150, 300)
+
     if not on_main_menu:
+        #spawning default cards
         if len(player_hand.sprites()) < 2:
             player_number_of_cards_spawned += 1
             player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 533, 788, player_number_of_cards_spawned))
             player_number_of_cards_spawned += 1
             player_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 1067, 788, player_number_of_cards_spawned))
-
         if len(bot_hand.sprites()) < 2:
             bot_number_of_cards_spawned += 1
             bot_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 533, 112, bot_number_of_cards_spawned))
             bot_number_of_cards_spawned += 1
             bot_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 1067, 112, bot_number_of_cards_spawned))
-
-        for card in player_hand: # have to have this out of the below FOR loop
+        # player hand statistics
+        for card in player_hand: 
             if player_hand_area.colliderect(card):
-                player_number_of_cards_touching_table += 1 # so the cards on the table don't adjust their position the moment a card is spawned, but the moment it is dropped onto the table
+                player_number_of_cards_touching_table += 1
             player_number_of_cards_spawned += 1
 
             if card.active_image == card.front_image and card.on_table:
@@ -194,17 +208,15 @@ while running:
                     decorative_player_hand_value += 10
                 elif card.number == 11 and card.is_ace:
                     decorative_player_hand_value += 11
-
             if card.number <= 10:
                 player_hand_value += card.number
             elif card.number > 10 and not card.is_ace:
                 player_hand_value += 10
             elif card.number == 11 and card.is_ace:
                 player_hand_value += card.number
-            
             player_hand_value_indicator = hand_value_font.render(f'Your hand: {decorative_player_hand_value}', True, (0, 0, 0))
             player_hand_value_indicator_outline = hand_value_font.render(f'Your hand: {decorative_player_hand_value}', True, (255, 255, 255))
-
+        # bot hand statistics
         for card in bot_hand:
             if card.number <= 10:
                 bot_hand_value += card.number
@@ -212,9 +224,9 @@ while running:
                 bot_hand_value += 10
             elif card.number > 10 and card.is_ace:
                 bot_hand_value += card.number
-
-        for card in player_hand:
-
+        # all player card logic
+        for card in player_hand: 
+            card.rect.center = (card.x, card.y)
             if not card.on_table and not card.being_dragged and player_hand_area.colliderect(card):
                 card.on_table = True
                 flip_sound = pygame.mixer.Sound(f'resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
@@ -223,7 +235,7 @@ while running:
             if card.being_dragged and not card.on_table:
                 card.x += mouse_delta[0]
                 card.y += mouse_delta[1]
-            card.rect.center = (card.x, card.y)
+                card.rect.center = (card.x, card.y)
 
             if card.on_table:
                 if card.identifier_number == 1:
@@ -252,30 +264,42 @@ while running:
                 elif card.number == 11:
                     ace_hover_text = clear_sans_bold_size_1.render('Right click to change to 1', True, (0, 0, 0))
                     ace_hover_text_outline = clear_sans_bold_size_1.render('Right click to change to 1', True, (255, 255, 255))
-
+        # all bot card logic
+        for card in bot_hand:
+            card.rect.center = (card.x, card.y)
+            if card.identifier_number == 1:
+                bot_card_position_gap = 1600 / (bot_number_of_cards_spawned + 1) # set this to number of cards spawned or to number of cards on table to change the time at which the cards adjust their position, either immediately after a card is spawned or only when it is dropped onto a table, not sure which one looks nicer
+                card.x = bot_card_position_gap # locks the first card into the left position on the hand area
+                card.y = 112
+            else:
+                card.x = bot_card_position_gap * card.identifier_number
+                card.y = 112
+        # generic logic 
         if number_of_cards_not_flipped_over == 1:
             player_prompt_text = "Waiting for you to turn over your card..."
             waiting_for_player = True
         elif number_of_cards_not_flipped_over > 1:
             player_prompt_text = "Waiting for you to turn over your cards..."
             waiting_for_player = True
+        elif number_of_cards_not_flipped_over == 0:
+            waiting_for_player = False
 
         if current_turn == "bot" and not waiting_for_player:
             player_prompt_text = "Bot's turn"
-
+        # bot decision making
         if current_turn == "bot" and not waiting_for_player:
-            if bot_hand_value + 6.8 > 21: # 6.8 is like roughly the average card value
-                current_turn = "player"
-            elif bot_hand_value + 6.8 <= 21:
-                bot_number_of_cards_spawned += 1
-                bot_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], 50, 50, bot_number_of_cards_spawned))
-                current_turn = "player"
-
-        for card in bot_hand:
-            card.on_table = True
-            card.x = 500
-            card.y = 500
-
+            if bot_think_timer > 0:
+                bot_think_timer -= 1
+                player_prompt_text = "Bot is thinking"
+            if bot_think_timer == 0:
+                if bot_hand_value + 6.8 > 21: # 6.8 is like roughly the average card value
+                    current_turn = "player"
+                elif bot_hand_value + 6.8 <= 21:
+                    bot_number_of_cards_spawned += 1
+                    bot_hand.add(Card(random.randint(1, 13), random.choice(list(suits.items()))[0], bot_card_position_gap, 112, bot_number_of_cards_spawned))
+                    flip_sound = pygame.mixer.Sound(f'resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
+                    flip_sound.play()
+                    current_turn = "player"
         
     #event check
     for event in pygame.event.get():
@@ -312,6 +336,7 @@ while running:
                     flip_sound = pygame.mixer.Sound(f'resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
                     flip_sound.play()
                     current_turn = "bot"
+                    waiting_for_player = False
             elif event.button == 3:
                 for card in player_hand:
                     if card.rect.collidepoint(mouse_pos):
@@ -373,10 +398,13 @@ while running:
             screen.blit(deck_hover_text_outline, (mouse_pos[0] + 51, mouse_pos[1] - 11))
             screen.blit(deck_hover_text, (mouse_pos[0] + 50, mouse_pos[1] - 10))
 
-        for card in bot_hand:
-            screen.blit(card.active_image, card.rect)
+        screen.blit(player_prompt_outline, (player_prompt_rect[0] - 1, player_prompt_rect[1] + 1))
+        screen.blit(player_prompt, player_prompt_rect)
 
         for card in player_hand:
+            screen.blit(card.active_image, card.rect)
+
+        for card in bot_hand:
             screen.blit(card.active_image, card.rect)
 
         for card in player_hand:
@@ -386,9 +414,6 @@ while running:
             if card.on_table and card.active_image == card.front_image and card.is_ace and card.rect.collidepoint(mouse_pos):
                 screen.blit(ace_hover_text_outline, (mouse_pos[0] - 1, mouse_pos[1] + 1))
                 screen.blit(ace_hover_text, (mouse_pos[0], mouse_pos[1]))
-
-        screen.blit(player_prompt_outline, (player_prompt_rect[0] - 1, player_prompt_rect[1] + 1))
-        screen.blit(player_prompt, player_prompt_rect)
         
     if bgm_playing == True:
         screen.blit(bgm_on_full, bgm_icon_position)
@@ -399,7 +424,7 @@ while running:
         screen.blit(bgm_toggle_hover_text_outline, (mouse_pos[0] - 151, mouse_pos[1] + 36))
         screen.blit(bgm_toggle_hover_text, (mouse_pos[0] - 150, mouse_pos[1] + 35))
     
-    turn_indicator = clear_sans_bold_size_1.render(f'{current_turn}', True, (255, 255, 255)) # testing, get rid of afterwards
+    """turn_indicator = clear_sans_bold_size_1.render(f'{current_turn}', True, (255, 255, 255)) # testing, get rid of afterwards
     waiting_indicator = clear_sans_bold_size_1.render(f'Waiting for player: {waiting_for_player}', True, (255, 255, 255))
     test_1 = clear_sans_bold_size_1.render(f'cards touching table: {player_number_of_cards_touching_table}', True, (255, 255, 255))
     test_2 = clear_sans_bold_size_1.render(f'player number of cards spawned: {player_number_of_cards_spawned}', True, (255, 255, 255))
@@ -413,7 +438,7 @@ while running:
     screen.blit(waiting_indicator, (1100, 550))
     screen.blit(test_1, (1100, 600))
     screen.blit(test_2, (1000, 650))
-    screen.blit(test_5, (1000, 350))
+    screen.blit(test_5, (1000, 350))"""
 
     cursor_image_rect.center = pygame.mouse.get_pos()
     screen.blit(cursor_image, cursor_image_rect) # cursor should be the last thing blitted 
