@@ -76,7 +76,7 @@ bot_hand = pygame.sprite.Group()
 bot_hand_area = pygame.Rect(0, 0, 1600, 225)
 bot_number_of_cards_spawned = 0
 bot_hand_value = 0
-bot_think_timer = random.randint(150, 220)
+bot_think_timer = random.randint(100, 150)
 bot_prompt_text = ""
 bot_prompt_rect = pygame.Rect(500, 230, 1, 1)
 bot_stood = False
@@ -167,7 +167,7 @@ music_credit_text = credit_font.render('Music credit: https://www.youtube.com/wa
 art_credit_text = credit_font.render('Featuring art from opengameart.org', True, (0, 0, 0), (255, 255, 255))
 ace_hover_text = clear_sans_bold_size_1.render('', True, text_colour)
 ace_hover_text_outline = clear_sans_bold_size_1.render('', True, outline_colour)
-rule_explanation_text = credit_font.render('Aces can be either 1 or 11 depending on user choice, click them in your deck!', True, outline_colour, text_colour)
+rule_explanation_text = credit_font.render('Aces can be either 1 or 11 depending on user choice, click them in your hand!', True, outline_colour, text_colour)
 
 card_names = {
     1 : "Ace (1)",
@@ -269,7 +269,7 @@ while running:
     display_ready = False
 
     if bot_think_timer <= 0:
-        bot_think_timer = random.randint(150, 220)
+        bot_think_timer = random.randint(100, 150)
 
     if not on_main_menu:
         #spawning default cards
@@ -430,7 +430,7 @@ while running:
                         card.number = 11
                     elif card.identifier_number:
                         card.number = 1
-        if current_turn == "bot" and not waiting_for_player and not display_ready:
+        if current_turn == "bot" and not waiting_for_player and not display_ready and not game_over:
             bot_stood = False
             if bot_think_timer > 0:
                 if bot_hand_value + 6.8 > 21:
