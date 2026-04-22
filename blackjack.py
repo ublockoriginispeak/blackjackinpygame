@@ -465,7 +465,7 @@ while running:
                         background_music_0.set_volume(1)
                     flip_sound = pygame.mixer.Sound(f'resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
                     flip_sound.play()
-                if home_button_rect.collidepoint(mouse_pos):
+                if home_button_rect.collidepoint(mouse_pos) and not on_main_menu:
                     on_main_menu = True
                     reset_game()
                     flip_sound = pygame.mixer.Sound(f'resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
