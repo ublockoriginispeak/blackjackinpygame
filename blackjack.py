@@ -53,6 +53,8 @@ restart_image = pygame.image.load('resources/restart.png').convert_alpha()
 restart_image = pygame.transform.scale(restart_image, (16 * 7, 16 * 7))
 restart_rect = pygame.Rect(800, 600, restart_image.get_width(), restart_image.get_height())
 restart_rect.center = (800, 600)
+restart_hover_text_outline = clear_sans_bold_size_1.render('Restart', True, outline_colour)
+restart_hover_text = clear_sans_bold_size_1.render('Restart', True, text_colour)
 
 player_prompt_font = pygame.font.SysFont('Clear Sans Bold', 50)
 player_prompt_rect = pygame.Rect(500, 640, 1, 1)
@@ -74,7 +76,7 @@ bot_hand = pygame.sprite.Group()
 bot_hand_area = pygame.Rect(0, 0, 1600, 225)
 bot_number_of_cards_spawned = 0
 bot_hand_value = 0
-bot_think_timer = random.randint(150, 300)
+bot_think_timer = random.randint(150, 220)
 bot_prompt_text = ""
 bot_prompt_rect = pygame.Rect(500, 230, 1, 1)
 bot_stood = False
@@ -165,6 +167,7 @@ music_credit_text = credit_font.render('Music credit: https://www.youtube.com/wa
 art_credit_text = credit_font.render('Featuring art from opengameart.org', True, (0, 0, 0), (255, 255, 255))
 ace_hover_text = clear_sans_bold_size_1.render('', True, text_colour)
 ace_hover_text_outline = clear_sans_bold_size_1.render('', True, outline_colour)
+rule_explanation_text = credit_font.render('Aces can be either 1 or 11 depending on user choice, click them in your deck!', True, outline_colour, text_colour)
 
 card_names = {
     1 : "Ace (1)",
@@ -220,6 +223,7 @@ def reveal_hands():
         card.active_image = card.front_image
 
 def reset_game():
+    global winner, game_over, display_ready, player_bust, bot_bust, player_number_of_cards_spawned, bot_number_of_cards_spawned, player_card_position_gap, bot_card_position_gap, current_turn,player_stood, bot_stood, waiting_for_player
     for card in player_hand:
         player_hand.remove(card)
     for card in bot_hand:
@@ -265,7 +269,7 @@ while running:
     display_ready = False
 
     if bot_think_timer <= 0:
-        bot_think_timer = random.randint(150, 300)
+        bot_think_timer = random.randint(150, 220)
 
     if not on_main_menu:
         #spawning default cards
@@ -426,7 +430,7 @@ while running:
                         card.number = 11
                     elif card.identifier_number:
                         card.number = 1
-        if current_turn == "bot" and not waiting_for_player:
+        if current_turn == "bot" and not waiting_for_player and not display_ready:
             bot_stood = False
             if bot_think_timer > 0:
                 if bot_hand_value + 6.8 > 21:
@@ -464,11 +468,10 @@ while running:
                 if home_button_rect.collidepoint(mouse_pos):
                     on_main_menu = True
                     reset_game()
-                    game_over = True
-                    display_ready = False
-                    bot_stood = False
-                    player_stood = False
-                    bot_number_of_cards_spawned = 0 # for some reason putting this in the above function doesn't work
+                    flip_sound = pygame.mixer.Sound(f'resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
+                    flip_sound.play()
+                if restart_rect.collidepoint(mouse_pos) and game_over:
+                    reset_game()
                     flip_sound = pygame.mixer.Sound(f'resources/sounds/card_flip_{random.randint(1, 3)}.mp3')
                     flip_sound.play()
                 for card in player_hand:
@@ -545,6 +548,7 @@ while running:
             screen.blit(play_button_image_1, play_button_rect)
         screen.blit(music_credit_text, (20, 850))
         screen.blit(art_credit_text, (1220, 850))
+        screen.blit(rule_explanation_text, (460, 670))
     else:
         pygame.draw.rect(screen, (176, 128, 58), player_hand_area)
         pygame.draw.rect(screen, (176, 128, 58), bot_hand_area)
@@ -554,15 +558,15 @@ while running:
 
         bot_prompt_outline = bot_prompt_font.render(f'{bot_prompt_text}', True, outline_colour)
         bot_prompt = bot_prompt_font.render(f'{bot_prompt_text}', True, text_colour)
-        screen.blit(bot_prompt_outline, (bot_prompt_rect[0] + 3, bot_prompt_rect[1] + 3))
+        screen.blit(bot_prompt_outline, (bot_prompt_rect[0] + 2, bot_prompt_rect[1] + 2))
         screen.blit(bot_prompt, bot_prompt_rect)
 
         player_prompt = player_prompt_font.render(f'{player_prompt_text}', True, text_colour)
         player_prompt_outline = player_prompt_font.render(f"{player_prompt_text}", True, outline_colour)
-        screen.blit(player_prompt_outline, (player_prompt_rect[0] + 3, player_prompt_rect[1] + 3))
+        screen.blit(player_prompt_outline, (player_prompt_rect[0] + 2, player_prompt_rect[1] + 2))
         screen.blit(player_prompt, player_prompt_rect)
 
-        screen.blit(player_hand_value_indicator_outline, (player_hand_value_indicator_position[0] + 3, player_hand_value_indicator_position[1] + 3))
+        screen.blit(player_hand_value_indicator_outline, (player_hand_value_indicator_position[0] + 2, player_hand_value_indicator_position[1] + 2))
         screen.blit(player_hand_value_indicator, player_hand_value_indicator_position)
         
         player_hand_value_indicator_outline = hand_value_font.render(f'Your hand: {decorative_player_hand_value}', True, outline_colour)
@@ -571,7 +575,7 @@ while running:
         else:
             player_hand_value_indicator = hand_value_font.render(f'Your hand: {decorative_player_hand_value}', True, text_colour)
 
-        screen.blit(bot_hand_value_indicator_outline, (bot_hand_value_indicator_position[0] + 3, bot_hand_value_indicator_position[1] + 3))
+        screen.blit(bot_hand_value_indicator_outline, (bot_hand_value_indicator_position[0] + 2, bot_hand_value_indicator_position[1] + 2))
         screen.blit(bot_hand_value_indicator, bot_hand_value_indicator_position)
         
         if stand_button_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player and not game_over and not display_ready:
@@ -580,11 +584,11 @@ while running:
             screen.blit(stand_button_image_1, stand_button_rect)
         
         if home_button_rect.collidepoint(mouse_pos):
-            screen.blit(home_button_hover_text_outline, (mouse_pos[0] + 28, mouse_pos[1] + 28))
+            screen.blit(home_button_hover_text_outline, (mouse_pos[0] + 27, mouse_pos[1] + 27))
             screen.blit(home_button_hover_text, (mouse_pos[0] + 25, mouse_pos[1] + 25))
 
         if deck_rect.collidepoint(mouse_pos) and current_turn == "player" and not waiting_for_player and not game_over and not display_ready:
-            screen.blit(deck_hover_text_outline, (mouse_pos[0] + 53, mouse_pos[1] + 13))
+            screen.blit(deck_hover_text_outline, (mouse_pos[0] + 52, mouse_pos[1] + 12))
             screen.blit(deck_hover_text, (mouse_pos[0] + 50, mouse_pos[1] + 10))
 
         if display_ready:
@@ -610,6 +614,10 @@ while running:
             screen.blit(result_image, result_rect)
             screen.blit(restart_image, restart_rect)
 
+            if restart_rect.collidepoint(mouse_pos):
+                screen.blit(restart_hover_text_outline, (mouse_pos[0] + 2, mouse_pos[1] + 22))
+                screen.blit(restart_hover_text, (mouse_pos[0], mouse_pos[1] + 20))
+
         for card in player_hand:
             screen.blit(card.active_image, card.rect)
 
@@ -618,10 +626,10 @@ while running:
 
         for card in player_hand:
             if card.on_table and card.active_image == card.back_image and card.rect.collidepoint(mouse_pos) and not game_over and not display_ready:
-                screen.blit(player_card_back_hover_text_outline, (mouse_pos[0] + 33, mouse_pos[1] + 3))
+                screen.blit(player_card_back_hover_text_outline, (mouse_pos[0] + 32, mouse_pos[1] + 2))
                 screen.blit(player_card_back_hover_text, (mouse_pos[0] + 30, mouse_pos[1]))
             if card.on_table and card.active_image == card.front_image and card.is_ace and card.rect.collidepoint(mouse_pos) and not game_over and not display_ready:
-                screen.blit(ace_hover_text_outline, (mouse_pos[0] + 33, mouse_pos[1] + 3))
+                screen.blit(ace_hover_text_outline, (mouse_pos[0] + 32, mouse_pos[1] + 2))
                 screen.blit(ace_hover_text, (mouse_pos[0] + 30, mouse_pos[1]))
         
     if bgm_playing == True:
@@ -630,10 +638,10 @@ while running:
         screen.blit(bgm_off, bgm_icon_position)
 
     if bgm_toggle.collidepoint(mouse_pos):
-        screen.blit(bgm_toggle_hover_text_outline, (mouse_pos[0] - 147, mouse_pos[1] + 32))
+        screen.blit(bgm_toggle_hover_text_outline, (mouse_pos[0] - 148, mouse_pos[1] + 33))
         screen.blit(bgm_toggle_hover_text, (mouse_pos[0] - 150, mouse_pos[1] + 35))
     
-    turn_indicator = clear_sans_bold_size_1.render(f'{current_turn}', True, (255, 255, 255)) # testing, get rid of afterwards
+    """turn_indicator = clear_sans_bold_size_1.render(f'{current_turn}', True, (255, 255, 255)) # testing, get rid of afterwards
     waiting_indicator = clear_sans_bold_size_1.render(f'Waiting for player: {waiting_for_player}', True, (255, 255, 255))
     test_1 = clear_sans_bold_size_1.render(f'cards touching table: {player_number_of_cards_touching_table}', True, (255, 255, 255))
     test_2 = clear_sans_bold_size_1.render(f'player number of cards spawned: {player_number_of_cards_spawned}', True, (255, 255, 255))
@@ -647,7 +655,7 @@ while running:
     screen.blit(waiting_indicator, (1100, 550))
     screen.blit(test_1, (1100, 600))
     screen.blit(test_2, (1000, 650))
-    screen.blit(test_5, (1000, 350))
+    screen.blit(test_5, (1000, 350))"""
 
     cursor_image_rect.center = pygame.mouse.get_pos()
     screen.blit(cursor_image, cursor_image_rect) # cursor should be the last thing blitted 
